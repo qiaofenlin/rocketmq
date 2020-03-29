@@ -237,7 +237,7 @@ public class MQClientInstance {
                     this.mQClientAPIImpl.start();
                     // Start various schedule tasks
                     this.startScheduledTask();
-                    // Start pull service
+                    // Start pull service  从braoker中拉去获取消息
                     this.pullMessageService.start();
                     // Start rebalance service
                     this.rebalanceService.start();

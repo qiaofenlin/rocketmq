@@ -61,17 +61,24 @@ public class ProcessQueue {
     private volatile boolean locked = false;
     private volatile long lastLockTimestamp = System.currentTimeMillis();
     private volatile boolean consuming = false;
+
+    /*服务器端还有多少消息没有被处理 瞬时的状态*/
     private volatile long msgAccCnt = 0;
 
+
+    /* 锁是否过期 */
     public boolean isLockExpired() {
         return (System.currentTimeMillis() - this.lastLockTimestamp) > REBALANCE_LOCK_MAX_LIVE_TIME;
     }
 
+    /* 拉取是否过期 */
     public boolean isPullExpired() {
         return (System.currentTimeMillis() - this.lastPullTimestamp) > PULL_MAX_IDLE_TIME;
     }
 
     /**
+     * 清理过期消息
+     *
      * @param pushConsumer
      */
     public void cleanExpiredMsg(DefaultMQPushConsumer pushConsumer) {
@@ -124,6 +131,12 @@ public class ProcessQueue {
         }
     }
 
+    /**
+     * 初始化ProcessQueue
+     *
+     * @param msgs
+     * @return
+     */
     public boolean putMessage(final List<MessageExt> msgs) {
         boolean dispatchToConsume = false;
         try {
@@ -165,6 +178,11 @@ public class ProcessQueue {
         return dispatchToConsume;
     }
 
+    /**
+     * 最大间隔
+     *
+     * @return
+     */
     public long getMaxSpan() {
         try {
             this.lockTreeMap.readLock().lockInterruptibly();
@@ -182,6 +200,11 @@ public class ProcessQueue {
         return 0;
     }
 
+    /**
+     *
+     * @param msgs
+     * @return
+     */
     public long removeMessage(final List<MessageExt> msgs) {
         long result = -1;
         final long now = System.currentTimeMillis();

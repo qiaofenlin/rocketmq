@@ -776,6 +776,12 @@ public class CommitLog {
 
     }
 
+    /**
+     * 写入缓冲去实现
+     *
+     * @param msg
+     * @return
+     */
     public PutMessageResult putMessage(final MessageExtBrokerInner msg) {
         // Set the storage time
         msg.setStoreTimestamp(System.currentTimeMillis());
@@ -825,8 +831,11 @@ public class CommitLog {
         long elapsedTimeInLock = 0;
 
         MappedFile unlockMappedFile = null;
+
+        /*家目录下/store/commitlog中的最新的文件*/
         MappedFile mappedFile = this.mappedFileQueue.getLastMappedFile();
 
+        /*锁缓冲区*/
         putMessageLock.lock(); //spin or ReentrantLock ,depending on store config
         try {
             long beginLockTimestamp = this.defaultMessageStore.getSystemClock().now();
@@ -845,6 +854,7 @@ public class CommitLog {
                 return new PutMessageResult(PutMessageStatus.CREATE_MAPEDFILE_FAILED, null);
             }
 
+            /*追加数据*/
             result = mappedFile.appendMessage(msg, this.appendMessageCallback);
             switch (result.getStatus()) {
                 case PUT_OK:
@@ -893,7 +903,10 @@ public class CommitLog {
         storeStatsService.getSinglePutMessageTopicTimesTotal(msg.getTopic()).incrementAndGet();
         storeStatsService.getSinglePutMessageTopicSizeTotal(topic).addAndGet(result.getWroteBytes());
 
+        /*开始刷盘*/
         handleDiskFlush(result, putMessageResult, msg);
+
+        /*集群中的主从复制*/
         handleHA(result, putMessageResult, msg);
 
         return putMessageResult;
@@ -1229,6 +1242,7 @@ public class CommitLog {
         protected static final int RETRY_TIMES_OVER = 10;
     }
 
+    /*Sync flush*/
     class CommitRealTimeService extends FlushCommitLogService {
 
         private long lastCommitTimestamp = 0;
@@ -1281,7 +1295,7 @@ public class CommitLog {
             CommitLog.log.info(this.getServiceName() + " service end");
         }
     }
-
+    /*Sync flush*/
     class FlushRealTimeService extends FlushCommitLogService {
         private long lastFlushTimestamp = 0;
         private long printTimes = 0;
@@ -1399,6 +1413,8 @@ public class CommitLog {
     /**
      * GroupCommit Service
      */
+
+    /*Async flush*/
     class GroupCommitService extends FlushCommitLogService {
         private volatile List<GroupCommitRequest> requestsWrite = new ArrayList<GroupCommitRequest>();
         private volatile List<GroupCommitRequest> requestsRead = new ArrayList<GroupCommitRequest>();
@@ -1765,6 +1781,8 @@ public class CommitLog {
             AppendMessageResult result = new AppendMessageResult(AppendMessageStatus.PUT_OK, wroteOffset, totalMsgLen, msgIdBuilder.toString(),
                 messageExtBatch.getStoreTimestamp(), beginQueueOffset, CommitLog.this.defaultMessageStore.now() - beginTimeMills);
             result.setMsgNum(msgNum);
+
+            /*向内存中写入Topic的具体信息 key, queueOffset */
             CommitLog.this.topicQueueTable.put(key, queueOffset);
 
             return result;

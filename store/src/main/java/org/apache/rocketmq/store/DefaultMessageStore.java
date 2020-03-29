@@ -62,6 +62,10 @@ import org.apache.rocketmq.store.index.QueryOffsetResult;
 import org.apache.rocketmq.store.schedule.ScheduleMessageService;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
 
+/*
+* 主方法
+*
+* */
 public class DefaultMessageStore implements MessageStore {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
 
@@ -186,9 +190,11 @@ public class DefaultMessageStore implements MessageStore {
             }
 
             // load Commit Log
+            /* load 磁盘中commitlog文件 到`mappedFiles`中，包含一些元数据 */
             result = result && this.commitLog.load();
 
             // load Consume Queue
+            /* load 磁盘中consumequeue文件 */
             result = result && this.loadConsumeQueue();
 
             if (result) {
@@ -469,6 +475,12 @@ public class DefaultMessageStore implements MessageStore {
         return resultFuture;
     }
 
+
+    /**
+     * 存储消息入口
+     * @param msg Message instance to store
+     * @return
+     */
     @Override
     public PutMessageResult putMessage(MessageExtBrokerInner msg) {
         PutMessageStatus checkStoreStatus = this.checkStoreStatus();
@@ -482,6 +494,8 @@ public class DefaultMessageStore implements MessageStore {
         }
 
         long beginTime = this.getSystemClock().now();
+
+        /*开始存储消息*/
         PutMessageResult result = this.commitLog.putMessage(msg);
         long elapsedTime = this.getSystemClock().now() - beginTime;
         if (elapsedTime > 500) {
