@@ -136,12 +136,21 @@ public class BrokerOuterAPI {
             requestHeader.setCompressed(compressed);
 
             RegisterBrokerBody requestBody = new RegisterBrokerBody();
+
+            /*Topic信息*/
             requestBody.setTopicConfigSerializeWrapper(topicConfigWrapper);
+
+            /*过滤器消息*/
             requestBody.setFilterServerList(filterServerList);
             final byte[] body = requestBody.encode(compressed);
             final int bodyCrc32 = UtilAll.crc32(body);
             requestHeader.setBodyCrc32(bodyCrc32);
             final CountDownLatch countDownLatch = new CountDownLatch(nameServerAddressList.size());
+
+            /*同步发送的
+            *
+            * broker同步 定时开启线程 向所有NameServer 发送心跳包
+            * */
             for (final String namesrvAddr : nameServerAddressList) {
                 brokerOuterExecutor.execute(new Runnable() {
                     @Override
